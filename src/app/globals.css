@@ -1,0 +1,104 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+/*
+ * IREG design tokens — taken from the Figma mobile design.
+ *   primary      #0284c7  (logo badge, FAB, primary buttons, active nav)
+ *   foreground   #0f172a  (headings, body)
+ *   border       #e2e8f0  (cards, app bar)
+ *   field        #f8f9fa / #d9d9d9 (form inputs)
+ *   muted text   #94a3b8 / #64748b
+ *   rating star  #f59e0b
+ */
+:root {
+  --radius: 0.75rem;
+
+  --background: #ffffff;
+  --foreground: #0f172a;
+
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+  --popover: #ffffff;
+  --popover-foreground: #0f172a;
+
+  --primary: #0284c7;
+  --primary-foreground: #ffffff;
+  --primary-hover: #0369a1;
+  --primary-soft: #e0f2fe;
+
+  --secondary: #f1f5f9;
+  --secondary-foreground: #0f172a;
+
+  --muted: #f8fafc;
+  --muted-foreground: #64748b;
+  --subtle-foreground: #94a3b8;
+
+  --accent: #e0f2fe;
+  --accent-foreground: #075985;
+
+  --destructive: #dc2626;
+  --success: #16a34a;
+  --star: #f59e0b;
+
+  --border: #e2e8f0;
+  --input: #d9d9d9;
+  --field: #f8f9fa;
+  --ring: #0284c7;
+}
+
+@theme inline {
+  --font-sans: var(--font-figtree), ui-sans-serif, system-ui, sans-serif;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-soft: var(--primary-soft);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-subtle-foreground: var(--subtle-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-success: var(--success);
+  --color-star: var(--star);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-field: var(--field);
+  --color-ring: var(--ring);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 6px);
+
+  --animate-caret-blink: caret-blink 1.25s ease-out infinite;
+  @keyframes caret-blink {
+    0%,
+    70%,
+    100% {
+      opacity: 1;
+    }
+    20%,
+    50% {
+      opacity: 0;
+    }
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
+}
