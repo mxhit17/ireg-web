@@ -8,7 +8,9 @@ import { extractImageUrl, extractUser } from "./normalize";
 const PROFILE = "user-and-admin-management/profile";
 
 export interface UpdateProfileInput {
-  name: string;
+  name?: string;
+  /** `null` clears it. Needed for consultation payments (Cashfree requires a mobile number). */
+  phone?: string | null;
 }
 
 export async function getProfile(): Promise<User> {

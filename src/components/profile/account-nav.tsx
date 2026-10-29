@@ -11,6 +11,7 @@ import {
   Loader2,
   LogOut,
   MessageSquareText,
+  ShieldCheck,
   UserRound,
   type LucideIcon,
 } from "lucide-react";
@@ -33,12 +34,13 @@ const ITEMS: NavItem[] = [
   { label: "Profile", icon: UserRound, href: "/profile" },
   { label: "Saved", icon: Bookmark, href: "/profile/saved" },
   { label: "My project requests", icon: FileClock, href: "/projects/requests" },
-  { label: "My Consultations", icon: BriefcaseBusiness, href: "/consultations", soon: true },
+  { label: "My Consultations", icon: BriefcaseBusiness, href: "/consultations" },
   { label: "Feedback", icon: MessageSquareText, href: "/feedback", soon: true },
 ];
 
 const ADMIN_ITEMS: NavItem[] = [
   { label: "Review project requests", icon: ClipboardCheck, href: "/admin/project-requests" },
+  { label: "Manage consultations", icon: ShieldCheck, href: "/admin/consultations" },
 ];
 
 const rowClass =

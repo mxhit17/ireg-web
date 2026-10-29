@@ -186,6 +186,79 @@ separate file-only multipart PATCH.
 - `DELETE` is a soft delete but also removes the cover from Cloudinary, so a restore would lose the image.
 - A blog titled "Manage" would get the slug `manage`, which is shadowed by the editor route.
 
+## Consultations (`/consultations`)
+
+| Who | Screen | Route | API |
+|---|---|---|---|
+| Everyone | Services (Figma `consultations-home` / `consultations-offered`) + "Ongoing consultations" | `/consultations` | `GET consultation-services`, `GET consultations/me` |
+| User | Book: question box, mobile number if missing, **Pay ₹500** (Figma `book-consultation`) | `/consultations/book/[serviceId]` | `POST consultations`, `POST consultations/:id/payment` → Cashfree checkout |
+| User | Back from Cashfree: confirms the payment | `/consultations/payment-return?consultation_id=` | `GET consultations/:id/payment-status` (polled) |
+| User / SME / Admin | Consultation: status, progress, chat-window countdown, chat (Figma `consultation-chat`) | `/consultations/[id]` | `GET consultations/:id`, `GET/POST …/messages`, `PATCH …/messages/read` |
+| SME | "Assigned to you" on the Consultation tab | `/consultations` | proposed `GET sme/consultations` |
+| Admin | Queue (Needs an expert / Active / Awaiting payment / Closed) | `/admin/consultations` | proposed `GET admin/consultations` |
+| Admin | Assign / reassign expert, Mark as complete (on the consultation page) | `/consultations/[id]` | `POST admin/consultations/:id/assign` `{ sme_id }`, `POST …/:id/complete` |
+
+How it behaves:
+
+- **Payment** uses Cashfree's hosted checkout (their JS SDK v3 is loaded from `sdk.cashfree.com` only
+  when the user pays — no npm package). Set the backend's `CASHFREE_RETURN_URL` to
+  `<web origin>/consultations/payment-return` (e.g. `http://localhost:3000/consultations/payment-return`).
+  The app sends that as `return_url` and retries without it if the backend rejects the origin.
+- Cashfree needs the buyer's **mobile number**: the booking page asks for it when the profile has none
+  and saves it to the profile (`PATCH profile { phone }`). The profile form now has a phone field too.
+- The booking note ("Write in brief about your doubts") has no API field, and chat only opens once an
+  expert is assigned, so it's kept in the browser and pre-fills the client's first message.
+- **Chat** polls the newest 50 messages every 5 s while the tab is visible, pages older ones with
+  `before`, sends optimistically, and marks the other side's messages read ("Seen"). Only text is
+  supported — there's no upload endpoint for `IMAGE`/`DOCUMENT` attachments yet (they display if present).
+- The chat window is `expires_at`, or `started_at + duration_days` (7) when that's empty; the composer
+  closes after it. Admins can read every chat but don't reply. The page re-checks every 20 s while
+  waiting for payment confirmation or an expert.
+- Roles: the client sees the expert's name, the expert sees the client's, admins see both plus the
+  reference ID. An admin who is also the client/expert of a consultation gets the participant view
+  with the admin tools still available.
+
+### Backend follow-ups (consultations)
+
+1. **SMEs can't list their assignments** — `consultations/me` only returns bookings *made* by the user.
+   Until `GET sme/consultations` exists, SMEs open consultations from a shared link (with a
+   "Recently opened" list).
+2. **Admins can't list consultations or SMEs** — the queue and the expert picker light up as soon as
+   these exist; until then admins open consultations by link/ID and paste the SME's user ID.
+3. `expires_at` is never set and nothing expires consultations or notifies the other party on new
+   messages ("a notification will go to the receiver"). Polling covers the open page only.
+4. `CreateConsultationDto` has no field for the booking note.
+
+Suggested routes (the frontend already calls them and falls back on 404):
+
+```ts
+// consultations.controller.ts
+@Get('sme/consultations')
+@UseGuards(JwtAuthGuard, RolesGuard) @Roles(Role.SME)
+listAssigned(@Req() req: AuthenticatedRequest) {
+  return this.prisma.consultations.findMany({
+    where: { sme_id: req.user.id }, include: consultationInclude, orderBy: { updated_at: 'desc' },
+  });
+}
+
+@Get('admin/consultations')
+@UseGuards(JwtAuthGuard, RolesGuard) @Roles(Role.ADMIN)
+listAll(@Query('status') status?: consultation_status) {
+  return this.prisma.consultations.findMany({
+    where: status ? { status } : {}, include: consultationInclude, orderBy: { created_at: 'desc' }, take: 200,
+  });
+}
+
+@Get('admin/smes')
+@UseGuards(JwtAuthGuard, RolesGuard) @Roles(Role.ADMIN)
+listSmes() {
+  return this.prisma.users.findMany({
+    where: { deleted_at: null, user_roles: { some: { roles: { name: 'SME' } } } },
+    select: { id: true, name: true, email: true }, orderBy: { name: 'asc' },
+  });
+}
+```
+
 ## Session user
 
 `auth/me` only returns `{ id, email, roles }`, so the session routes merge it with

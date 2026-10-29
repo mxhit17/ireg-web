@@ -5,7 +5,7 @@
  * (public reads return PUBLISHED only), so drafts saved from this browser are remembered here to
  * let them be found, edited and published later. Remove once admin "list drafts" APIs exist.
  */
-export function createSnapshotStore<T extends { id: string }>(key: string, keep: (item: T) => boolean) {
+export function createSnapshotStore<T extends { id: string }>(key: string, keep: (item: T) => boolean, limit = 50) {
   const event = `${key}:change`;
 
   function read(): T[] {
@@ -33,7 +33,7 @@ export function createSnapshotStore<T extends { id: string }>(key: string, keep:
     /** Store the item while `keep(item)` holds (e.g. still a draft); otherwise drop it. */
     remember(item: T) {
       const others = read().filter((t) => t.id !== item.id);
-      write(keep(item) ? [item, ...others] : others);
+      write(keep(item) ? [item, ...others].slice(0, limit) : others);
     },
     forget(id: string) {
       write(read().filter((t) => t.id !== id));

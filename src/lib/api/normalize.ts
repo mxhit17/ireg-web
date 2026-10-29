@@ -50,6 +50,11 @@ export function isAdmin(user: Partial<User> | null | undefined) {
   return !!user?.roles?.some((r) => r.toUpperCase() === "ADMIN");
 }
 
+/** Subject-matter expert (lawyer, CA, banker…) who answers consultations. */
+export function isSme(user: Partial<User> | null | undefined) {
+  return !!user?.roles?.some((r) => r.toUpperCase() === "SME");
+}
+
 /** Keys the backend might use for the profile photo, in order of preference. */
 const AVATAR_KEYS = [
   "profile_image_url",

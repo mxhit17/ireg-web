@@ -28,7 +28,10 @@ export function useUpdateProfile() {
       const current = queryClient.getQueryData(profileQuery.queryKey);
       const next: User | undefined = updated ?? (current ? { ...current, ...input } : undefined);
       if (next) queryClient.setQueryData(profileQuery.queryKey, next);
-      patchSessionUser(queryClient, { name: next?.name ?? input.name });
+      const patch: Partial<User> = {};
+      if (input.name !== undefined) patch.name = next?.name ?? input.name;
+      if (input.phone !== undefined) patch.phone = next?.phone ?? input.phone;
+      patchSessionUser(queryClient, patch);
       toast.success("Profile updated");
     },
   });

@@ -11,7 +11,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input";
 import { useUpdateProfile } from "@/hooks/use-profile";
 import { isApiError } from "@/lib/api/errors";
-import { profileSchema, type ProfileValues } from "@/lib/validation/profile";
+import { normalizeIndianMobile, profileSchema, type ProfileValues } from "@/lib/validation/profile";
 import type { User } from "@/types/auth";
 
 export function ProfileDetailsForm({ user }: { user: User }) {
@@ -24,20 +24,25 @@ export function ProfileDetailsForm({ user }: { user: User }) {
     formState: { errors, isDirty },
   } = useForm<ProfileValues>({
     resolver: zodResolver(profileSchema),
-    defaultValues: { name: user.name ?? "" },
+    defaultValues: { name: user.name ?? "", phone: user.phone ?? "" },
   });
 
   // Keep the form in step with fresh server data (unless the user is mid-edit).
   useEffect(() => {
-    if (!isDirty) reset({ name: user.name ?? "" });
-  }, [user.name, isDirty, reset]);
+    if (!isDirty) reset({ name: user.name ?? "", phone: user.phone ?? "" });
+  }, [user.name, user.phone, isDirty, reset]);
 
   const onSubmit = handleSubmit((values) => {
-    if (values.name === user.name) {
-      reset(values);
+    const phone = values.phone ? normalizeIndianMobile(values.phone) : null;
+    const changes: { name?: string; phone?: string | null } = {};
+    if (values.name !== user.name) changes.name = values.name;
+    if ((phone ?? null) !== (user.phone || null)) changes.phone = phone;
+    const saved = { name: values.name, phone: phone ?? "" };
+    if (Object.keys(changes).length === 0) {
+      reset(saved);
       return;
     }
-    update.mutate(values, { onSuccess: () => reset(values) });
+    update.mutate(changes, { onSuccess: () => reset(saved) });
   });
 
   const errorMessage = update.error
@@ -51,7 +56,7 @@ export function ProfileDetailsForm({ user }: { user: User }) {
       <form onSubmit={onSubmit} noValidate>
         <CardHeader>
           <CardTitle>Personal details</CardTitle>
-          <CardDescription>Your name is shown next to your comments and ratings.</CardDescription>
+          <CardDescription>Your name is shown next to your comments and ratings. Your number stays private.</CardDescription>
         </CardHeader>
 
         <CardContent className="grid gap-5">
@@ -65,6 +70,24 @@ export function ProfileDetailsForm({ user }: { user: User }) {
               aria-invalid={!!errors.name}
               aria-describedby={errors.name ? "name-error" : undefined}
               {...register("name")}
+            />
+          </FormField>
+
+          <FormField
+            id="phone"
+            label="Mobile number"
+            error={errors.phone?.message}
+            hint="Needed to pay for consultations. Not shown to other users."
+          >
+            <Input
+              id="phone"
+              type="tel"
+              inputMode="tel"
+              autoComplete="tel-national"
+              placeholder="98765 43210"
+              aria-invalid={!!errors.phone}
+              aria-describedby={errors.phone ? "phone-error" : "phone-hint"}
+              {...register("phone")}
             />
           </FormField>
 
@@ -89,7 +112,7 @@ export function ProfileDetailsForm({ user }: { user: User }) {
             type="button"
             variant="ghost"
             onClick={() => {
-              reset({ name: user.name ?? "" });
+              reset({ name: user.name ?? "", phone: user.phone ?? "" });
               update.reset();
             }}
             disabled={!isDirty || update.isPending}
