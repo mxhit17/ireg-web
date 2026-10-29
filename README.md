@@ -131,6 +131,61 @@ The form also warns about possible duplicates while the user types the project n
 downscaled to ≤ 1600 px in the browser before upload. There's no "get request by id" endpoint, so the
 review page reads the request from the pending list.
 
+## Knowledge Base (`/knowledge-base`)
+
+Everyone can read; only ADMINs see the write tools (the API enforces the role too).
+
+| Screen | Route | API |
+|---|---|---|
+| Categories + search (Figma `knowledge-base-list`) | `/knowledge-base?q=` | `GET knowledge/categories`, `GET knowledge/topics/search?q` |
+| Topics in a category, level filter (Figma `knowledge-base-sublist`) | `/knowledge-base/[category]` | `GET knowledge/categories/:slug/topics` |
+| Topic: level/tags, "Important" disclaimer, Definition, In simple words (Figma `knowledge-base-info-screen`) + prev/next and "More in…" | `/knowledge-base/[category]/[topic]` | `GET knowledge/topics/:slug` |
+| Admin: **New category** dialog (home page) | — | `POST admin/knowledge/categories` |
+| Admin: new topic — Save as draft / Publish, live preview | `/knowledge-base/manage/new?category=<id>` | `POST admin/knowledge/topics` |
+| Admin: edit topic — Save, Publish, Move to drafts | `/knowledge-base/manage/[id]?slug=` | `PATCH admin/knowledge/topics/:id`, `POST …/:id/publish` |
+
+Categories have no image in the API, so the Figma thumbnail is a tinted icon picked from the
+category name (`category-icon.tsx`).
+
+### Backend follow-ups
+
+- **No way to list drafts.** Public reads return PUBLISHED only and there's no admin read, so drafts
+  saved from a browser are remembered in `localStorage` (`src/lib/knowledge-drafts.ts`) and listed as
+  "Your drafts" on the home page — other admins/browsers won't see them. Adding
+  `GET admin/knowledge/topics?status=DRAFT` (and `GET admin/knowledge/topics/:id`) would remove this.
+- **Categories can only be created**, not renamed, reordered or deleted — add
+  `PATCH/DELETE admin/knowledge/categories/:id` and the UI can grow an edit dialog.
+- Topic slugs are unique per category, but `GET knowledge/topics/:slug` uses `findFirst`, so two
+  categories with the same topic title can collide.
+- A category whose slug is `manage` would be shadowed by the admin editor route.
+
+## Blogs (`/blogs`)
+
+Everyone can read; only ADMINs see the write tools (the API enforces the role too).
+
+| Screen | Route | API |
+|---|---|---|
+| Blog list: newest post featured, cover cards with "• 5 min read", search (Figma `blog-list`) | `/blogs?q=` | `GET blogs` |
+| Article: title, cover, "Source · Published" row, body, share, more blogs (Figma `blog-view`) | `/blogs/[slug]` | `GET blogs/:slug` |
+| Admin: create — cover photo, title, summary, body, source + link → **Save as draft** / **Post** (Figma `create-blog-screen`) | `/blogs/manage/new` | `POST admin/blogs` (multipart, `cover_image`), then `POST admin/blogs/:id/publish` |
+| Admin: edit — Save, Post (drafts), Delete | `/blogs/manage/[id]?slug=` | `PATCH admin/blogs/:id`, `POST …/:id/publish`, `DELETE admin/blogs/:id` |
+
+Admins get a "Create Blog" floating button on phones (as in Figma) and a header button on wider screens.
+Search runs in the browser because `GET blogs` returns every published blog in one list. The body is
+plain text: a blank line starts a new paragraph. Covers are downscaled to ≤ 1920 px before upload.
+Edits send text changes as JSON (so optional fields can be cleared with `null`) and a new cover as a
+separate file-only multipart PATCH.
+
+### Backend follow-ups
+
+- **No way to list drafts** (same as the Knowledge Base): drafts saved from a browser are remembered
+  in `localStorage` (`src/lib/blog-drafts.ts`, built on `src/lib/local-snapshots.ts`). Add
+  `GET admin/blogs?status=DRAFT` and `GET admin/blogs/:id` to replace this.
+- **No unpublish** — `PATCH` doesn't accept `status`, so a published blog can only be edited or deleted.
+- **No pagination** on `GET blogs`; add `limit/offset` (and `q`) once there are many posts.
+- `DELETE` is a soft delete but also removes the cover from Cloudinary, so a restore would lose the image.
+- A blog titled "Manage" would get the slug `manage`, which is shadowed by the editor route.
+
 ## Session user
 
 `auth/me` only returns `{ id, email, roles }`, so the session routes merge it with

@@ -65,3 +65,16 @@ export function timeAgo(iso: string, now = Date.now()): string {
 export function formatCount(n: number): string {
   return n >= 1000 ? `${(n / 1000).toFixed(n >= 10000 ? 0 : 1).replace(/\.0$/, "")}k` : String(n);
 }
+
+/** "30 Sep 2026" (Figma "Created at : 30 Sep 2026"). Empty string for missing/invalid dates. */
+export function formatDate(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const t = new Date(iso).getTime();
+  return Number.isNaN(t) ? "" : shortDate.format(t);
+}
+
+/** "5 min read" at ~200 words per minute (minimum 1). */
+export function readingTime(text: string): string {
+  const words = text.trim().split(/\s+/).filter(Boolean).length;
+  return `${Math.max(1, Math.round(words / 200))} min read`;
+}
