@@ -6,8 +6,10 @@ import type {
   ConsultationStatus,
   MessagePage,
   MessageType,
+  Paged,
   PaymentStart,
   PaymentStatus,
+  SmeOption,
 } from "@/types/consultation";
 
 import { api } from "./client";
@@ -214,30 +216,54 @@ export async function completeConsultation(id: string): Promise<Consultation | n
 }
 
 // ---------------------------------------------------------------------------
-// Proposed list endpoints (not in the backend yet — see README "Consultations").
-// They resolve to `null` while the route doesn't exist, so screens can fall back.
+// Admin + SME lists — paginated `{ data, meta }` (page from 1, limit ≤ 100)
 // ---------------------------------------------------------------------------
 
-async function optional<T>(load: () => Promise<T>): Promise<T | null> {
-  try {
-    return await load();
-  } catch (err) {
-    if (isApiError(err) && [404, 405, 501].includes(err.status)) return null;
-    throw err;
-  }
+function toPaged<T>(body: unknown, map: (raw: unknown) => T | null): Paged<T> {
+  const b = isObj(body) ? body : {};
+  const meta = isObj(b.meta) ? b.meta : {};
+  const items = asArray(body)
+    .map(map)
+    .filter((x): x is T => x !== null);
+  const page = num(meta.page) || 1;
+  return {
+    items,
+    page,
+    totalItems: num(meta.totalItems ?? items.length),
+    totalPages: num(meta.totalPages) || 1,
+    hasNextPage: meta.hasNextPage === true,
+  };
 }
 
-/** Proposed: GET sme/consultations — consultations assigned to the signed-in SME. */
-export const getAssignedConsultations = () => optional(async () => toList(await api.get<unknown>("sme/consultations")));
+const PAGE_SIZE = 30;
+const listPage = async (path: string, page: number, limit = PAGE_SIZE) =>
+  toPaged(await api.get<unknown>(path, { query: { page, limit } }), toConsultation);
 
-/** Proposed: GET admin/consultations?status= — every consultation, optionally filtered. */
-export const getAllConsultations = (statusFilter?: ConsultationStatus) =>
-  optional(async () => toList(await api.get<unknown>("admin/consultations", { query: { status: statusFilter } })));
+/** Admin: paid but not completed (PAID, ASSIGNED, ONGOING), newest first. */
+export const getAdminActiveConsultations = (page = 1) => listPage("admin/consultations", page);
 
-/** Proposed: GET admin/smes — users with the SME role, for the assign picker. */
-export const getSmes = () =>
-  optional(async () =>
-    asArray(await api.get<unknown>("admin/smes"))
-      .map(toParty)
-      .filter((p): p is ConsultationParty => !!p),
-  );
+/** Admin: COMPLETED, most recently completed first. */
+export const getAdminCompletedConsultations = (page = 1) => listPage("admin/consultations/completed", page);
+
+/** SME: my ONGOING consultations (started chats), with the client. */
+export const getSmeOngoingConsultations = (page = 1) => listPage("sme/consultations/ongoing", page);
+
+/** SME: my COMPLETED consultations. */
+export const getSmeCompletedConsultations = (page = 1) => listPage("sme/consultations/completed", page);
+
+function toSme(raw: unknown): SmeOption | null {
+  const p = toParty(raw);
+  if (!p || !isObj(raw)) return null;
+  return { ...p, phone: str(raw.phone), profileImageUrl: str(raw.profile_image_url) };
+}
+
+/** Admin: every active SME (all pages, A–Z) for the assign picker. */
+export async function getSmes(): Promise<SmeOption[]> {
+  const all: SmeOption[] = [];
+  for (let page = 1; page <= 10; page++) {
+    const res = toPaged(await api.get<unknown>("admin/consultations/smes", { query: { page, limit: 100 } }), toSme);
+    all.push(...res.items);
+    if (!res.hasNextPage) break;
+  }
+  return all;
+}

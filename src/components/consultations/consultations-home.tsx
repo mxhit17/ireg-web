@@ -1,23 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { AlertCircle, BriefcaseBusiness, ChevronRight, Clock, Inbox, ShieldCheck } from "lucide-react";
+import { useState } from "react";
+import { AlertCircle, BriefcaseBusiness, ChevronRight, Clock, Inbox, Loader2, ShieldCheck } from "lucide-react";
 
 import { ConsultationCard, OpenConsultationForm, ServiceCard } from "@/components/consultations/consultation-bits";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCurrentUser } from "@/hooks/use-auth";
-import {
-  useAllConsultations,
-  useAssignedConsultations,
-  useConsultationServices,
-  useMyConsultations,
-  useRecentConsultations,
-} from "@/hooks/use-consultations";
+import { useConsultationList, useConsultationServices, useMyConsultations } from "@/hooks/use-consultations";
 import { isApiError } from "@/lib/api/errors";
 import { isAdmin, isSme } from "@/lib/api/normalize";
 import { isActive } from "@/lib/consultation-status";
+import { cn } from "@/lib/utils";
 import type { Consultation } from "@/types/consultation";
 
 /**
@@ -149,52 +145,96 @@ function ConsultationList({ list, viewer }: { list: Consultation[]; viewer: "use
   );
 }
 
-/** SME: consultations assigned to me (needs the proposed `GET sme/consultations`). */
+/** SME: my ongoing chats (GET sme/consultations/ongoing) and finished ones (…/completed). */
 function AssignedSection() {
-  const me = useCurrentUser();
-  const assigned = useAssignedConsultations(true);
-  const recent = useRecentConsultations().filter((c) => c.smeId === me?.id);
-  const active = (assigned.data ?? []).filter(isActive);
+  const [tab, setTab] = useState<"ongoing" | "completed">("ongoing");
+  const ongoing = useConsultationList("sme-ongoing");
+  const completed = useConsultationList("sme-completed", tab === "completed");
+  const q = tab === "ongoing" ? ongoing : completed;
 
   return (
-    <section aria-labelledby="assigned-title" className="grid min-w-0 grid-cols-1 gap-3 rounded-2xl border border-violet-200 bg-violet-50/50 p-4 sm:p-5">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 id="assigned-title" className="text-lg font-bold">
-          Assigned to you
-        </h2>
-        <span className="text-xs font-semibold text-violet-700">Expert view</span>
-      </div>
-      {assigned.isPending ? (
-        <Skeleton className="h-[84px] rounded-2xl" />
-      ) : assigned.isError ? (
-        <ErrorCard error={assigned.error} onRetry={() => assigned.refetch()} what="your assignments" />
-      ) : assigned.data === null ? (
-        <div className="grid gap-4">
-          <p className="text-sm text-slate-700">
-            Open a consultation from the link the IREG team shares with you. (The backend can&apos;t list your
-            assignments yet.)
-          </p>
-          <OpenConsultationForm className="max-w-xl" />
-          {recent.length > 0 && (
-            <div className="grid gap-2">
-              <p className="text-sm font-semibold text-muted-foreground">Recently opened</p>
-              <ConsultationList list={recent} viewer="sme" />
-            </div>
-          )}
+    <section aria-labelledby="assigned-title" className="grid min-w-0 grid-cols-1 gap-4 rounded-2xl border border-violet-200 bg-violet-50/50 p-4 sm:p-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 id="assigned-title" className="text-lg font-bold">
+            Your clients
+          </h2>
+          <p className="text-sm text-muted-foreground">Consultations assigned to you as an expert.</p>
         </div>
-      ) : active.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Nothing assigned right now. New consultations will appear here.</p>
+        <div role="tablist" aria-label="Your consultations" className="flex rounded-xl bg-white p-1 ring-1 ring-violet-200">
+          {(
+            [
+              ["ongoing", "Ongoing", ongoing],
+              ["completed", "Completed", completed],
+            ] as const
+          ).map(([key, label, query]) => (
+            <button
+              key={key}
+              role="tab"
+              type="button"
+              aria-selected={tab === key}
+              onClick={() => setTab(key)}
+              className={cn(
+                "cursor-pointer rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors",
+                tab === key ? "bg-violet-600 text-white" : "text-slate-600 hover:bg-violet-50",
+              )}
+            >
+              {label}
+              {query.isSuccess && <span className="ml-1 opacity-75">{query.total}</span>}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {q.isPending ? (
+        <div className="grid gap-3 sm:grid-cols-2">
+          {[0, 1].map((i) => (
+            <Skeleton key={i} className="h-[84px] rounded-2xl" />
+          ))}
+        </div>
+      ) : q.isError ? (
+        <ErrorCard error={q.error} onRetry={() => q.refetch()} what="your consultations" />
+      ) : q.items.length === 0 ? (
+        <p className="rounded-xl bg-white px-4 py-6 text-center text-sm text-muted-foreground ring-1 ring-violet-100">
+          {tab === "ongoing" ? "No ongoing chats right now." : "No completed consultations yet."}
+        </p>
       ) : (
-        <ConsultationList list={active} viewer="sme" />
+        <ul className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+          {q.items.map((c) => (
+            <li key={c.id}>
+              <ConsultationCard consultation={c} viewer="sme" />
+            </li>
+          ))}
+        </ul>
+      )}
+      {q.hasNextPage && (
+        <Button variant="outline" size="sm" onClick={() => q.fetchNextPage()} disabled={q.isFetchingNextPage} className="mx-auto bg-white">
+          {q.isFetchingNextPage && <Loader2 className="animate-spin" />}
+          Load more
+        </Button>
+      )}
+
+      {tab === "ongoing" && (
+        <details className="group text-sm">
+          <summary className="flex w-fit cursor-pointer list-none items-center gap-1 font-semibold text-violet-700 hover:underline">
+            <ChevronRight className="size-4 transition-transform group-open:rotate-90" /> Newly assigned? Open it from its link
+          </summary>
+          <p className="mt-2 text-muted-foreground">
+            A consultation shows here once its chat has started. To send the first message on a new assignment, open the
+            link the IREG team shared with you.
+          </p>
+          <OpenConsultationForm className="mt-3 max-w-xl" />
+        </details>
       )}
     </section>
   );
 }
 
-/** Admin: link to the queue, with the "needs an expert" count when the list API exists. */
+/** Admin: link to the queue, with how many paid consultations still need an expert. */
 function AdminBanner() {
-  const paid = useAllConsultations("PAID", true);
-  const waiting = paid.data?.length ?? null;
+  const active = useConsultationList("admin-active");
+  const waiting = active.isSuccess ? active.items.filter((c) => c.status === "PAID").length : null;
+  const more = active.hasNextPage ? "+" : "";
   return (
     <Link
       href="/admin/consultations"
@@ -209,11 +249,16 @@ function AdminBanner() {
           {waiting === null
             ? "Assign experts and close finished consultations."
             : waiting === 0
-              ? "No paid consultations are waiting for an expert."
-              : `${waiting} paid consultation${waiting === 1 ? " is" : "s are"} waiting for an expert.`}
+              ? `${active.total} in progress · every paid consultation has an expert.`
+              : `${waiting}${more} paid consultation${waiting === 1 && !more ? " is" : "s are"} waiting for an expert.`}
         </p>
       </div>
-      {!!waiting && <span className="rounded-full bg-primary px-2.5 py-0.5 text-sm font-bold text-white">{waiting}</span>}
+      {!!waiting && (
+        <span className="rounded-full bg-amber-500 px-2.5 py-0.5 text-sm font-bold text-white">
+          {waiting}
+          {more}
+        </span>
+      )}
       <ChevronRight className="size-5 text-subtle-foreground transition-transform group-hover:translate-x-0.5" />
     </Link>
   );

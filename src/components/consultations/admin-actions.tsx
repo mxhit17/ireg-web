@@ -4,31 +4,64 @@ import { useEffect, useRef, useState } from "react";
 import { CheckCircle2, Loader2, UserRoundCheck } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { useAssignConsultation, useCompleteConsultation, useSmes } from "@/hooks/use-consultations";
+import { cn } from "@/lib/utils";
 import type { Consultation } from "@/types/consultation";
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
 /**
- * Admin: assign (or reassign) an expert — POST admin/consultations/:id/assign { sme_id }.
- * Uses a picker when the proposed `GET admin/smes` exists, otherwise takes the SME's user ID.
+ * Admin: assign (or reassign) an expert — POST admin/consultations/:id/assign { sme_id }, picking
+ * from GET admin/consultations/smes. `compact` is the one-line version used in the queue.
  */
-export function AssignExpert({ consultation: c }: { consultation: Consultation }) {
-  const smes = useSmes(true);
+export function AssignExpert({ consultation: c, compact = false }: { consultation: Consultation; compact?: boolean }) {
+  const smes = useSmes();
   const assign = useAssignConsultation(c.id);
   const [smeId, setSmeId] = useState(c.smeId ?? "");
   const [error, setError] = useState<string | null>(null);
   const reassign = !!c.smeId;
-  const list = smes.data;
+  const list = smes.data ?? [];
+  const inputId = `assign-sme-${c.id}`;
 
   function submit() {
-    const id = smeId.trim();
-    if (!UUID.test(id)) return setError(list ? "Choose an expert" : "Paste the expert's user ID (a UUID)");
-    if (id === c.smeId) return setError("That expert is already assigned");
+    if (!smeId) return setError("Choose an expert");
+    if (smeId === c.smeId) return setError("That expert is already assigned");
     setError(null);
-    assign.mutate(id);
+    assign.mutate(smeId);
   }
+
+  const select = (
+    <select
+      id={inputId}
+      value={smeId}
+      onChange={(e) => {
+        setSmeId(e.target.value);
+        setError(null);
+      }}
+      disabled={smes.isPending || assign.isPending}
+      aria-invalid={!!error}
+      aria-label={compact ? `Expert for ${c.service?.name ?? "this consultation"}` : undefined}
+      className={cn(
+        "w-full min-w-0 cursor-pointer rounded-lg border border-input bg-field px-3 text-[15px] outline-none focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-primary/15 aria-invalid:border-destructive disabled:cursor-wait",
+        compact ? "h-10 text-sm" : "h-11",
+      )}
+    >
+      <option value="">
+        {smes.isPending ? "Loading experts…" : smes.isError ? "Couldn't load experts" : list.length ? "Choose an expert" : "No experts yet"}
+      </option>
+      {list.map((s) => (
+        <option key={s.id} value={s.id}>
+          {s.name ?? s.email ?? "Unnamed expert"}
+          {s.name && s.email ? ` · ${s.email}` : ""}
+        </option>
+      ))}
+    </select>
+  );
+
+  const button = (
+    <Button type="submit" disabled={assign.isPending || smes.isPending} className={cn(compact && "h-10 shrink-0")}>
+      {assign.isPending ? <Loader2 className="animate-spin" /> : <UserRoundCheck />}
+      {reassign ? "Reassign" : compact ? "Assign" : "Assign expert"}
+    </Button>
+  );
 
   return (
     <form
@@ -39,53 +72,26 @@ export function AssignExpert({ consultation: c }: { consultation: Consultation }
       }}
       className="grid gap-2"
     >
-      <label htmlFor="assign-sme" className="text-sm font-semibold">
-        {reassign ? "Reassign expert" : "Assign an expert"}
-      </label>
-      {list ? (
-        <select
-          id="assign-sme"
-          value={smeId}
-          onChange={(e) => {
-            setSmeId(e.target.value);
-            setError(null);
-          }}
-          aria-invalid={!!error}
-          className="h-11 w-full cursor-pointer rounded-lg border border-input bg-field px-3 text-[15px] outline-none focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-primary/15"
-        >
-          <option value="">{list.length ? "Choose an expert" : "No SME accounts yet"}</option>
-          {list.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.name ?? s.email ?? s.id}
-              {s.name && s.email ? ` (${s.email})` : ""}
-            </option>
-          ))}
-        </select>
+      {compact ? (
+        <div className="flex gap-2">
+          {select}
+          {button}
+        </div>
       ) : (
-        <Input
-          id="assign-sme"
-          value={smeId}
-          onChange={(e) => {
-            setSmeId(e.target.value);
-            setError(null);
-          }}
-          placeholder={smes.isPending ? "Loading experts…" : "Expert's user ID"}
-          aria-invalid={!!error}
-          className="h-11 font-mono text-sm"
-        />
+        <>
+          <label htmlFor={inputId} className="text-sm font-semibold">
+            {reassign ? "Reassign expert" : "Assign an expert"}
+          </label>
+          {select}
+        </>
       )}
-      {error ? (
-        <p className="text-[13px] font-medium text-destructive">{error}</p>
-      ) : (
-        !list &&
-        !smes.isPending && (
-          <p className="text-xs text-muted-foreground">The backend can&apos;t list SMEs yet, so paste the expert&apos;s user ID.</p>
-        )
+      {error && <p className="text-[13px] font-medium text-destructive">{error}</p>}
+      {smes.isError && (
+        <button type="button" onClick={() => smes.refetch()} className="w-fit cursor-pointer text-xs font-semibold text-primary hover:underline">
+          Retry loading experts
+        </button>
       )}
-      <Button type="submit" disabled={assign.isPending}>
-        {assign.isPending ? <Loader2 className="animate-spin" /> : <UserRoundCheck />}
-        {reassign ? "Reassign" : "Assign expert"}
-      </Button>
+      {!compact && button}
     </form>
   );
 }

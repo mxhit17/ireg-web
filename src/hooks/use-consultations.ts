@@ -1,21 +1,23 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import {
   assignConsultation,
   bookConsultation,
   completeConsultation,
-  getAllConsultations,
-  getAssignedConsultations,
+  getAdminActiveConsultations,
+  getAdminCompletedConsultations,
   getConsultation,
   getConsultationService,
   getConsultationServices,
   getMessages,
   getMyConsultations,
   getPaymentStatus,
+  getSmeCompletedConsultations,
+  getSmeOngoingConsultations,
   getSmes,
   markMessagesRead,
   sendMessage,
@@ -23,16 +25,15 @@ import {
 } from "@/lib/api/consultations";
 import { isApiError } from "@/lib/api/errors";
 import { openCashfreeCheckout } from "@/lib/cashfree";
-import { bookingNotes, recentConsultations } from "@/lib/consultation-local";
-import type { Consultation, ConsultationMessage, ConsultationStatus, MessagePage } from "@/types/consultation";
+import { bookingNotes } from "@/lib/consultation-local";
+import type { Consultation, ConsultationMessage, MessagePage, Paged } from "@/types/consultation";
 
 export const consultKeys = {
   all: ["consultations"] as const,
   services: ["consultations", "services"] as const,
   service: (id: string) => ["consultations", "services", id] as const,
   mine: ["consultations", "mine"] as const,
-  assigned: ["consultations", "assigned"] as const,
-  admin: (status?: ConsultationStatus) => ["consultations", "admin", status ?? "ALL"] as const,
+  list: (scope: ListScope) => ["consultations", "list", scope] as const,
   smes: ["consultations", "smes"] as const,
   detail: (id: string) => ["consultations", "detail", id] as const,
   latestMessages: (id: string) => ["consultations", "detail", id, "messages"] as const,
@@ -59,22 +60,35 @@ export function useMyConsultations(enabled = true) {
   return useQuery({ queryKey: consultKeys.mine, queryFn: getMyConsultations, enabled, refetchInterval: 60_000 });
 }
 
-/** SME assignments — `data === null` means the backend doesn't offer the list yet. */
-export function useAssignedConsultations(enabled: boolean) {
-  return useQuery({ queryKey: consultKeys.assigned, queryFn: getAssignedConsultations, enabled, refetchInterval: 60_000 });
-}
+/** Paginated lists for admins (active / completed) and SMEs (ongoing / completed). */
+export type ListScope = "admin-active" | "admin-completed" | "sme-ongoing" | "sme-completed";
 
-/** Admin list — `data === null` means the backend doesn't offer the list yet. */
-export function useAllConsultations(status: ConsultationStatus | undefined, enabled: boolean) {
-  return useQuery({
-    queryKey: consultKeys.admin(status),
-    queryFn: () => getAllConsultations(status),
+const LOADERS: Record<ListScope, (page: number) => Promise<Paged<Consultation>>> = {
+  "admin-active": getAdminActiveConsultations,
+  "admin-completed": getAdminCompletedConsultations,
+  "sme-ongoing": getSmeOngoingConsultations,
+  "sme-completed": getSmeCompletedConsultations,
+};
+
+export function useConsultationList(scope: ListScope, enabled = true) {
+  const query = useInfiniteQuery({
+    queryKey: consultKeys.list(scope),
+    queryFn: ({ pageParam }) => LOADERS[scope](pageParam),
+    initialPageParam: 1,
+    getNextPageParam: (last) => (last.hasNextPage ? last.page + 1 : undefined),
     enabled,
-    refetchInterval: 60_000,
+    // Active lists change as payments land and chats start; completed ones rarely.
+    refetchInterval: scope.endsWith("completed") ? false : 60_000,
   });
+  const items = useMemo(() => {
+    const seen = new Set<string>();
+    return (query.data?.pages ?? []).flatMap((p) => p.items).filter((c) => !seen.has(c.id) && !!seen.add(c.id));
+  }, [query.data]);
+  return { ...query, items, total: query.data?.pages[0]?.totalItems ?? 0 };
 }
 
-export function useSmes(enabled: boolean) {
+/** Admin: all active SMEs for the assign picker. */
+export function useSmes(enabled = true) {
   return useQuery({ queryKey: consultKeys.smes, queryFn: getSmes, enabled, staleTime: 5 * 60 * 1000 });
 }
 
@@ -82,8 +96,8 @@ export function useSmes(enabled: boolean) {
  * One consultation. While it's waiting on something outside this page (payment confirmation or
  * an expert being assigned) it re-checks every 20 s.
  */
-export function useConsultation(id: string, { remember = false }: { remember?: boolean } = {}) {
-  const query = useQuery({
+export function useConsultation(id: string) {
+  return useQuery({
     queryKey: consultKeys.detail(id),
     queryFn: () => getConsultation(id),
     refetchInterval: (q) => {
@@ -91,20 +105,6 @@ export function useConsultation(id: string, { remember = false }: { remember?: b
       return s === "PAID" || s === "ASSIGNED" || s === "PENDING_PAYMENT" ? 20_000 : false;
     },
   });
-  useEffect(() => {
-    if (remember && query.data) recentConsultations.remember(query.data);
-  }, [remember, query.data]);
-  return query;
-}
-
-/** Consultations this SME/admin opened recently (local stopgap for missing list endpoints). */
-export function useRecentConsultations() {
-  const [list, setList] = useState<Consultation[]>([]);
-  useEffect(() => {
-    setList(recentConsultations.list());
-    return recentConsultations.subscribe(() => setList(recentConsultations.list()));
-  }, []);
-  return list;
 }
 
 // ---------------------------------------------------------------------------
@@ -296,7 +296,6 @@ function useAdminWrite<V>(fn: (v: V) => Promise<Consultation | null>, success: s
     onSuccess: (updated) => {
       if (updated) {
         qc.setQueryData(consultKeys.detail(id), () => updated);
-        recentConsultations.remember(updated);
       }
       qc.invalidateQueries({ queryKey: consultKeys.all });
       toast.success(success);

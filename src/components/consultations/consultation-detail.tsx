@@ -12,7 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useCurrentUser } from "@/hooks/use-auth";
 import { useConsultation, usePayConsultation } from "@/hooks/use-consultations";
 import { isApiError } from "@/lib/api/errors";
-import { isAdmin, isSme } from "@/lib/api/normalize";
+import { isAdmin } from "@/lib/api/normalize";
 import { bookingNotes } from "@/lib/consultation-local";
 import { canMessage, chatClosesAt, formatPrice, STATUS_META, timeLeft } from "@/lib/consultation-status";
 import { formatDate } from "@/lib/format";
@@ -25,8 +25,7 @@ type Viewer = "user" | "sme" | "admin";
 export function ConsultationDetail({ id }: { id: string }) {
   const me = useCurrentUser();
   const admin = isAdmin(me);
-  // Admins and experts get a "recently opened" list (stopgap for the missing list APIs).
-  const query = useConsultation(id, { remember: admin || isSme(me) });
+  const query = useConsultation(id);
 
   if (query.isPending) {
     return (

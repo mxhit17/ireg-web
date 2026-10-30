@@ -1,6 +1,3 @@
-import { createSnapshotStore } from "@/lib/local-snapshots";
-import type { Consultation } from "@/types/consultation";
-
 /**
  * The booking note ("Write in brief about your doubts") has no field in the API yet, and chat only
  * opens once an expert is assigned — so the note waits here and pre-fills the first chat message.
@@ -33,9 +30,3 @@ export const bookingNotes = {
     bookingNotes.set(consultationId, "");
   },
 };
-
-/**
- * Consultations an SME or admin opened recently. Stopgap while the backend has no endpoint listing
- * an SME's assignments or all consultations for admins (see README).
- */
-export const recentConsultations = createSnapshotStore<Consultation>("ireg_recent_consultations", () => true, 20);

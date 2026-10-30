@@ -194,9 +194,14 @@ separate file-only multipart PATCH.
 | User | Book: question box, mobile number if missing, **Pay ₹500** (Figma `book-consultation`) | `/consultations/book/[serviceId]` | `POST consultations`, `POST consultations/:id/payment` → Cashfree checkout |
 | User | Back from Cashfree: confirms the payment | `/consultations/payment-return?consultation_id=` | `GET consultations/:id/payment-status` (polled) |
 | User / SME / Admin | Consultation: status, progress, chat-window countdown, chat (Figma `consultation-chat`) | `/consultations/[id]` | `GET consultations/:id`, `GET/POST …/messages`, `PATCH …/messages/read` |
-| SME | "Assigned to you" on the Consultation tab | `/consultations` | proposed `GET sme/consultations` |
-| Admin | Queue (Needs an expert / Active / Awaiting payment / Closed) | `/admin/consultations` | proposed `GET admin/consultations` |
+| SME | "Your clients" on the Consultation tab: Ongoing / Completed | `/consultations` | `GET sme/consultations/ongoing`, `GET sme/consultations/completed` |
+| Admin | Queue — **In progress** (filters: Needs an expert / Assigned / Ongoing; assign inline) and **Completed** | `/admin/consultations` | `GET admin/consultations`, `GET admin/consultations/completed` |
+| Admin | Expert picker (queue + consultation page) | — | `GET admin/consultations/smes` |
 | Admin | Assign / reassign expert, Mark as complete (on the consultation page) | `/consultations/[id]` | `POST admin/consultations/:id/assign` `{ sme_id }`, `POST …/:id/complete` |
+
+The admin and SME lists are paginated (`?page&limit`, `{ data, meta }`); the screens load 30 at a
+time with **Load more** and show `meta.totalItems` on the tabs. Unassigned (PAID) consultations are
+highlighted with how long ago they were paid, turning amber after 24 h and red after 48 h.
 
 How it behaves:
 
@@ -220,44 +225,15 @@ How it behaves:
 
 ### Backend follow-ups (consultations)
 
-1. **SMEs can't list their assignments** — `consultations/me` only returns bookings *made* by the user.
-   Until `GET sme/consultations` exists, SMEs open consultations from a shared link (with a
-   "Recently opened" list).
-2. **Admins can't list consultations or SMEs** — the queue and the expert picker light up as soon as
-   these exist; until then admins open consultations by link/ID and paste the SME's user ID.
-3. `expires_at` is never set and nothing expires consultations or notifies the other party on new
+1. **`GET sme/consultations/ongoing` returns only `ONGOING`.** A new assignment is `ASSIGNED` until the
+   first message, so the expert can't see it in their list and can only open it from a shared link
+   (there's an "Open it from its link" box under the list). Including `ASSIGNED` fixes this:
+   `status: { in: [consultation_status.ASSIGNED, consultation_status.ONGOING] }` — the UI already
+   handles both.
+2. `expires_at` is never set and nothing expires consultations or notifies the other party on new
    messages ("a notification will go to the receiver"). Polling covers the open page only.
-4. `CreateConsultationDto` has no field for the booking note.
-
-Suggested routes (the frontend already calls them and falls back on 404):
-
-```ts
-// consultations.controller.ts
-@Get('sme/consultations')
-@UseGuards(JwtAuthGuard, RolesGuard) @Roles(Role.SME)
-listAssigned(@Req() req: AuthenticatedRequest) {
-  return this.prisma.consultations.findMany({
-    where: { sme_id: req.user.id }, include: consultationInclude, orderBy: { updated_at: 'desc' },
-  });
-}
-
-@Get('admin/consultations')
-@UseGuards(JwtAuthGuard, RolesGuard) @Roles(Role.ADMIN)
-listAll(@Query('status') status?: consultation_status) {
-  return this.prisma.consultations.findMany({
-    where: status ? { status } : {}, include: consultationInclude, orderBy: { created_at: 'desc' }, take: 200,
-  });
-}
-
-@Get('admin/smes')
-@UseGuards(JwtAuthGuard, RolesGuard) @Roles(Role.ADMIN)
-listSmes() {
-  return this.prisma.users.findMany({
-    where: { deleted_at: null, user_roles: { some: { roles: { name: 'SME' } } } },
-    select: { id: true, name: true, email: true }, orderBy: { name: 'asc' },
-  });
-}
-```
+3. `CreateConsultationDto` has no field for the booking note.
+4. No upload endpoint for `IMAGE`/`DOCUMENT` chat messages.
 
 ## Session user
 

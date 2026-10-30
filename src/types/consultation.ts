@@ -31,6 +31,21 @@ export interface ConsultationParty {
   email: string | null;
 }
 
+/** GET admin/consultations/smes — experts an admin can assign. */
+export interface SmeOption extends ConsultationParty {
+  phone: string | null;
+  profileImageUrl: string | null;
+}
+
+/** Backend `paginate()` → `{ data, meta }`. */
+export interface Paged<T> {
+  items: T[];
+  page: number;
+  totalItems: number;
+  totalPages: number;
+  hasNextPage: boolean;
+}
+
 export interface Consultation {
   id: string;
   status: ConsultationStatus;
