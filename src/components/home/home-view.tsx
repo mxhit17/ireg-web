@@ -6,6 +6,7 @@ import { AlertCircle, Building2, Flame, Loader2, Sparkles } from "lucide-react";
 import { AdminRequestsBanner } from "@/components/home/admin-requests-banner";
 import { CreateProjectFab } from "@/components/home/create-project-fab";
 import { SavedRail } from "@/components/home/saved-rail";
+import { TopPopular } from "@/components/home/top-popular";
 import { ProjectCard, ProjectCardSkeleton } from "@/components/projects/project-card";
 import { FeedState, ProjectGrid, ProjectSearchResults } from "@/components/projects/project-feed";
 import { ProjectSearchBar } from "@/components/projects/project-search-bar";
@@ -17,7 +18,7 @@ import type { ProjectSummary } from "@/types/project";
 
 /**
  * Home = the "Threads & Search" tab. One call to GET home gives the Recently added and Popular
- * sections (saved projects excluded from both); saved projects sit in a rail above them.
+ * sections (saved projects excluded from both); a "Top 10" strip (GET popularity/popular) leads the page and saved projects close it.
  * A `?q=` in the URL swaps the sections for search results.
  */
 export function HomeView() {
@@ -77,7 +78,7 @@ function HomeSections() {
 
   return (
     <>
-      <SavedRail />
+      <TopPopular />
 
       {home.isPending ? (
         <>
@@ -105,6 +106,18 @@ function HomeSections() {
       ) : (
         <>
           <HomeSection
+            id="popular"
+            icon={<Flame className="size-5 text-orange-500" aria-hidden />}
+            title="Popular projects"
+            subtitle="Ranked by views, saves, comments and ratings over the last 30 days"
+            total={last?.pagination.popular.total}
+            projects={popular}
+            hasMore={!!last?.pagination.popular.hasNextPage}
+            loadingMore={home.isFetchingNextPage}
+            onMore={() => home.fetchNextPage()}
+            emptyText="Popularity is recalculated every 30 minutes from views, saves, comments and ratings — check back soon."
+          />
+          <HomeSection
             id="recent"
             icon={<Sparkles className="size-5 text-primary" aria-hidden />}
             title="Recently added"
@@ -115,20 +128,11 @@ function HomeSections() {
             loadingMore={home.isFetchingNextPage}
             onMore={() => home.fetchNextPage()}
           />
-          <HomeSection
-            id="popular"
-            icon={<Flame className="size-5 text-orange-500" aria-hidden />}
-            title="Popular"
-            subtitle="Most viewed, saved and discussed this month"
-            total={last?.pagination.popular.total}
-            projects={popular}
-            hasMore={!!last?.pagination.popular.hasNextPage}
-            loadingMore={home.isFetchingNextPage}
-            onMore={() => home.fetchNextPage()}
-            emptyText="Popularity is recalculated every 30 minutes from views, saves, comments and ratings — check back soon."
-          />
         </>
       )}
+
+      {/* Saved projects close the page (signed-in users only; hidden when empty). */}
+      <SavedRail />
     </>
   );
 }

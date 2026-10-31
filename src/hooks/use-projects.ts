@@ -3,6 +3,7 @@
 import { queryOptions, useInfiniteQuery, useQuery } from "@tanstack/react-query";
 
 import {
+  getPopularProjects,
   getProjectById,
   getProjectRatings,
   getTopDiscussions,
@@ -58,5 +59,14 @@ export function useTopDiscussions(id: string, enabled = true) {
     queryFn: () => getTopDiscussions(id),
     enabled,
     staleTime: 2 * 60 * 1000,
+  });
+}
+
+/** The 10 most popular projects (GET popularity/popular?limit=10) for the home "Top 10" strip. */
+export function useTopPopularProjects(count = 10) {
+  return useQuery({
+    queryKey: ["projects", "popular-top", count] as const,
+    queryFn: () => getPopularProjects({ limit: count }).then((p) => p.items),
+    staleTime: 5 * 60 * 1000,
   });
 }
