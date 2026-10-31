@@ -54,7 +54,7 @@ export function refreshSession(): Promise<RefreshResult> {
         return { status: "authenticated", accessToken: data.accessToken, user: data.user };
       } catch (err) {
         if (err instanceof ApiError && err.status === 401) {
-          tokenStore.clear();
+          tokenStore.markSignedOut();
           return { status: "unauthenticated" };
         }
         throw err; // network / 5xx — let callers decide (don't log the user out)
@@ -100,7 +100,7 @@ async function request<T>(path: string, options: RequestOptions = {}, isRetry = 
 
   if (auth) {
     // First call after a page load: restore the access token from the refresh cookie.
-    if (!tokenStore.get() && !isRetry) {
+    if (!tokenStore.get() && !isRetry && !tokenStore.isKnownSignedOut()) {
       try {
         await refreshSession();
       } catch {
@@ -122,7 +122,7 @@ async function request<T>(path: string, options: RequestOptions = {}, isRetry = 
     throw new ApiError("Can't connect. Check your internet connection and try again.", 0);
   }
 
-  if (res.status === 401 && auth && !isRetry) {
+  if (res.status === 401 && auth && !isRetry && !tokenStore.isKnownSignedOut()) {
     const refreshed = await refreshSession().catch(() => null);
     if (refreshed?.status === "authenticated") {
       return request<T>(path, options, true);

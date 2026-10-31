@@ -5,7 +5,7 @@ import { Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { UserAvatar } from "@/components/user/user-avatar";
-import { useCurrentUser } from "@/hooks/use-auth";
+import { useCurrentUser, useRequireLogin } from "@/hooks/use-auth";
 import { useCreateComment } from "@/hooks/use-project-detail";
 import { cn } from "@/lib/utils";
 
@@ -31,6 +31,7 @@ export function CommentComposer({
   className?: string;
 }) {
   const user = useCurrentUser();
+  const requireLogin = useRequireLogin();
   const create = useCreateComment(projectId);
   const isReply = !!parentCommentId;
   const [expanded, setExpanded] = useState(isReply);
@@ -62,6 +63,23 @@ export function CommentComposer({
     setText("");
     if (!isReply) setExpanded(false);
     onDone?.();
+  }
+
+  // Visitors browsing without an account: same pill, but it leads to login (and back here).
+  if (!user) {
+    return (
+      <button
+        type="button"
+        onClick={() => requireLogin("Log in to join the discussion")}
+        className={cn(
+          "flex h-11 w-full cursor-pointer items-center justify-between gap-3 rounded-full border border-slate-300/70 bg-border px-5 text-left text-base text-slate-500 transition-colors outline-none hover:bg-slate-200/80 focus-visible:ring-[3px] focus-visible:ring-ring/40",
+          className,
+        )}
+      >
+        <span className="truncate">Write a comment…</span>
+        <span className="shrink-0 text-sm font-semibold text-primary">Log in to comment</span>
+      </button>
+    );
   }
 
   if (!expanded) {

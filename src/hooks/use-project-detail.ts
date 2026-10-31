@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
+import { useCurrentUser } from "@/hooks/use-auth";
 import { homeKeys } from "@/hooks/use-home";
 import { projectKeys } from "@/hooks/use-projects";
 import { isApiError } from "@/lib/api/errors";
@@ -62,9 +63,11 @@ export function useReplies(commentId: string, enabled: boolean) {
 }
 
 export function useMyRating(projectId: string) {
+  const user = useCurrentUser();
   return useQuery({
     queryKey: detailKeys.myRating(projectId),
     queryFn: () => getMyRating(projectId),
+    enabled: !!user,
     staleTime: 5 * 60 * 1000,
   });
 }

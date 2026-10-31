@@ -12,10 +12,11 @@ import { SaveButton } from "@/components/projects/project-card";
 import { RatingStars } from "@/components/projects/rating-stars";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useRequireLogin } from "@/hooks/use-auth";
 import { useMyRating, useRecordProjectView } from "@/hooks/use-project-detail";
 import { useProject, useProjectRatings } from "@/hooks/use-projects";
 import { isApiError } from "@/lib/api/errors";
-import { formatPriceRange, formatProjectLocation, projectStatusLabel, projectTypeLabel } from "@/lib/format";
+import { formatProjectLocation } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 /**
@@ -28,6 +29,8 @@ export function ProjectOverview({ id }: { id: string }) {
   const ratings = useProjectRatings(id);
   const mine = useMyRating(id);
   const [rateOpen, setRateOpen] = useState(false);
+  const requireLogin = useRequireLogin();
+  const openRating = () => requireLogin("Log in to rate this project") && setRateOpen(true);
   useRecordProjectView(id);
 
   if (project.isPending) return <DetailSkeleton />;
@@ -102,24 +105,14 @@ export function ProjectOverview({ id }: { id: string }) {
           )}
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-1.5">
-            {[projectTypeLabel(p.type), projectStatusLabel(p.status)].filter(Boolean).map((c) => (
-              <span key={c} className="rounded-md bg-secondary px-2 py-1 text-xs font-semibold text-slate-600">
-                {c}
-              </span>
-            ))}
-            {formatPriceRange(p.minPrice, p.maxPrice) && (
-              <span className="px-1 text-sm font-bold">{formatPriceRange(p.minPrice, p.maxPrice)}</span>
-            )}
-          </div>
+        <div className="flex flex-wrap items-center justify-end gap-3">
           {/* Figma: share icon + "Rate" pill, grey #e2e8f0, 8px radius */}
           <div className="flex items-center gap-2">
             <SaveButton project={p} className="h-8 rounded-lg" />
             <ShareButton title={p.name} />
             <button
               type="button"
-              onClick={() => setRateOpen(true)}
+              onClick={openRating}
               className={cn(
                 "inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-lg px-3 text-sm font-bold transition-colors outline-none focus-visible:ring-[3px] focus-visible:ring-ring/40",
                 rated ? "bg-amber-50 text-amber-800 hover:bg-amber-100" : "bg-border text-foreground hover:bg-slate-300",
@@ -136,13 +129,10 @@ export function ProjectOverview({ id }: { id: string }) {
 
       {/* ---- Sidebar (desktop) / after discussions (mobile) ---- */}
       <aside className="order-last grid content-start gap-4 lg:sticky lg:top-24 lg:order-none lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:self-start">
-        <RatingsPanel projectId={id} onRate={() => setRateOpen(true)} />
+        <RatingsPanel projectId={id} onRate={openRating} />
         <Card className="grid gap-3 p-5 text-sm">
           <p className="text-xs font-bold tracking-wider text-subtle-foreground uppercase">Project details</p>
           <Fact label="Builder" value={p.builderName} />
-          <Fact label="Type" value={projectTypeLabel(p.type)} />
-          <Fact label="Status" value={projectStatusLabel(p.status)} />
-          <Fact label="Price" value={formatPriceRange(p.minPrice, p.maxPrice)} />
           <Fact
             label="Address"
             value={[p.location, p.locality, p.city, p.state].filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).join(", ") || null}

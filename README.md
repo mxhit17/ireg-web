@@ -26,10 +26,21 @@ Browser ──/backend/*──────▶ Next.js rewrite ──────
   cookie for a fresh access token + the user. "Keep me signed in" ⇒ 30-day sliding cookie; unticked ⇒
   session cookie that ends when the browser closes.
 - **Auto refresh**: `api.*` (`src/lib/api/client.ts`) retries once after a 401 using a single-flight
-  refresh (safe with rotating refresh tokens). If the refresh fails, the user is sent to `/login?next=…`.
-- **Route guard**: `src/middleware.ts` redirects signed-out users to `/login` and signed-in users away
-  from `/login`, `/signup`, `/verify-otp`. Make pages public by adding them to `PUBLIC_ROUTES` in
-  `src/lib/auth/constants.ts`.
+  refresh (safe with rotating refresh tokens). If the refresh fails on a members-only page, the user is
+  sent to `/login?next=…`.
+- **Public browsing**: visitors without an account land on Threads & Search, with **Log in** / **Sign up**
+  at the top right (and "Log in" in place of Profile in the mobile tab bar). They can read project
+  pages, ratings and discussions, the Knowledge Base, blogs and the consultation services. Saving,
+  rating, commenting, reacting, replying and booking send them to `/login?next=<page>` (with a short
+  toast) so they come straight back — see `useRequireLogin()` in `src/hooks/use-auth.ts`.
+  Logging out also lands on Threads & Search, and the login screens have "Continue without logging in".
+- **Route guard**: `src/middleware.ts` (and `AuthGate` on the client) let anyone open the pages matched
+  by `isPublicPath()` in `src/lib/auth/constants.ts`; every other page sends signed-out visitors to
+  `/login?next=…`. Signed-in users are sent away from `/login`, `/signup`, `/verify-otp`. To make a new
+  page public, add a pattern there.
+- Signed-out visitors don't retry the session refresh on every request: after one failed refresh the
+  client remembers it (`tokenStore.markSignedOut()`) until the next login. Queries that only make sense
+  when signed in (saved projects, my rating, my consultations) are disabled for them.
 - **Signup flow**: `/signup` → `POST auth/register` → `/verify-otp?email=…` → `POST auth/verify-otp`.
   If verification returns tokens the user is signed straight in; otherwise they land on `/login` with
   their email prefilled.

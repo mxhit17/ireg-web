@@ -7,12 +7,12 @@ import { Loader2, WifiOff } from "lucide-react";
 import { Logo } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
 import { useSession } from "@/hooks/use-auth";
-import { LOGIN_ROUTE } from "@/lib/auth/constants";
+import { isPublicPath, loginHref } from "@/lib/auth/constants";
 
 /**
- * Wraps signed-in areas. Restores the session on load (spinner meanwhile), sends
- * signed-out users to /login?next=…, and shows a retry screen if the server is unreachable
- * (instead of logging people out because of a network blip).
+ * Wraps the app. Restores the session on load (spinner meanwhile). Signed-out visitors can browse
+ * public pages (see `isPublicPath`); anywhere else they're sent to /login?next=…. Shows a retry
+ * screen if the server is unreachable (instead of logging people out because of a network blip).
  */
 export function AuthGate({ children }: { children: React.ReactNode }) {
   const session = useSession();
@@ -20,13 +20,11 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
   const signedOut = session.isSuccess && !session.data;
+  const mustLogIn = signedOut && !isPublicPath(pathname ?? "/");
 
   useEffect(() => {
-    if (signedOut) {
-      const next = pathname && pathname !== "/" ? `?next=${encodeURIComponent(pathname)}` : "";
-      router.replace(`${LOGIN_ROUTE}${next}`);
-    }
-  }, [signedOut, pathname, router]);
+    if (mustLogIn) router.replace(loginHref(`${pathname}${window.location.search}`));
+  }, [mustLogIn, pathname, router]);
 
   if (session.isError) {
     return (
@@ -44,7 +42,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (session.isPending || signedOut) {
+  if (session.isPending || mustLogIn) {
     return (
       <FullScreen>
         <Logo href={null} />

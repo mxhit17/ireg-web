@@ -5,7 +5,7 @@ import { ChevronDown, Loader2, ThumbsDown, ThumbsUp } from "lucide-react";
 
 import { CommentComposer } from "@/components/project-detail/comment-composer";
 import { UserAvatar } from "@/components/user/user-avatar";
-import { useCurrentUser } from "@/hooks/use-auth";
+import { useCurrentUser, useRequireLogin } from "@/hooks/use-auth";
 import { useInView } from "@/hooks/use-in-view";
 import { useCommentReaction, useDeleteComment, useReplies } from "@/hooks/use-project-detail";
 import { isAdmin } from "@/lib/api/normalize";
@@ -30,6 +30,7 @@ export function CommentItem({
   depth?: number;
 }) {
   const user = useCurrentUser();
+  const requireLogin = useRequireLogin();
   const isReply = depth > 0;
   const { ref, inView } = useInView<HTMLDivElement>({ rootMargin: "200px" });
   const [expanded, setExpanded] = useState<boolean | null>(null); // null = automatic
@@ -96,7 +97,7 @@ export function CommentItem({
         ) : (
           <div className="-ml-1.5 flex items-center gap-1 text-xs font-medium text-subtle-foreground">
             <ActionButton
-              onClick={() => reaction.toggle("LIKE")}
+              onClick={() => requireLogin("Log in to react to comments") && reaction.toggle("LIKE")}
               pressed={reaction.reaction === "LIKE"}
               label="Like"
               activeClass="text-primary"
@@ -105,7 +106,7 @@ export function CommentItem({
               {reaction.likes !== null && <span>{reaction.likes}</span>}
             </ActionButton>
             <ActionButton
-              onClick={() => reaction.toggle("DISLIKE")}
+              onClick={() => requireLogin("Log in to react to comments") && reaction.toggle("DISLIKE")}
               pressed={reaction.reaction === "DISLIKE"}
               label="Dislike"
               activeClass="text-slate-700"
@@ -113,7 +114,7 @@ export function CommentItem({
               <ThumbsDown className={cn("size-3.5", reaction.reaction === "DISLIKE" && "fill-slate-700/15")} aria-hidden />
               {reaction.dislikes !== null && <span>{reaction.dislikes}</span>}
             </ActionButton>
-            <ActionButton onClick={() => setReplying((r) => !r)} pressed={replying} label="Reply" activeClass="text-primary">
+            <ActionButton onClick={() => requireLogin("Log in to reply") && setReplying((r) => !r)} pressed={replying} label="Reply" activeClass="text-primary">
               Reply
             </ActionButton>
             {canDelete && (

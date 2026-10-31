@@ -13,7 +13,7 @@ import { useSavedProjects } from "@/hooks/use-home";
 import { useInView } from "@/hooks/use-in-view";
 import { useProject, useProjectRatings } from "@/hooks/use-projects";
 import { isApiError } from "@/lib/api/errors";
-import { formatProjectLocation, projectTypeLabel, timeAgo } from "@/lib/format";
+import { formatProjectLocation, timeAgo } from "@/lib/format";
 import type { SavedProject } from "@/types/project";
 
 /**
@@ -161,11 +161,6 @@ function SavedProjectTile({ project }: { project: SavedProject }) {
             </span>
           ) : (
             ratings.isSuccess && <span>Not rated yet</span>
-          )}
-          {projectTypeLabel(project.type) && (
-            <span className="rounded bg-secondary px-1.5 py-0.5 font-semibold text-slate-600">
-              {projectTypeLabel(project.type)}
-            </span>
           )}
           {project.savedAt && <span>Saved {timeAgo(project.savedAt)}</span>}
         </div>

@@ -12,6 +12,7 @@ import { useCurrentUser } from "@/hooks/use-auth";
 import { useConsultationList, useConsultationServices, useMyConsultations } from "@/hooks/use-consultations";
 import { isApiError } from "@/lib/api/errors";
 import { isAdmin, isSme } from "@/lib/api/normalize";
+import { loginHref } from "@/lib/auth/constants";
 import { isActive } from "@/lib/consultation-status";
 import { cn } from "@/lib/utils";
 import type { Consultation } from "@/types/consultation";
@@ -91,11 +92,29 @@ function ServicesSection() {
 }
 
 function MineSection({ hideWhenEmpty }: { hideWhenEmpty: boolean }) {
-  const mine = useMyConsultations();
+  const user = useCurrentUser();
+  const mine = useMyConsultations(!!user);
   const list = mine.data ?? [];
   const active = list.filter(isActive);
   const past = list.filter((c) => !isActive(c));
   if (hideWhenEmpty && mine.isSuccess && list.length === 0) return null;
+
+  if (!user) {
+    return (
+      <section aria-labelledby="mine-title" className="grid min-w-0 grid-cols-1 content-start gap-3 lg:sticky lg:top-24">
+        <h2 id="mine-title" className="text-lg font-bold">
+          Ongoing consultations
+        </h2>
+        <Card className="flex flex-col items-center gap-3 px-6 py-8 text-center">
+          <Inbox className="size-7 text-subtle-foreground" />
+          <p className="text-sm text-muted-foreground">Log in to book an expert and see your consultations here.</p>
+          <Button asChild>
+            <Link href={loginHref("/consultations")}>Log in</Link>
+          </Button>
+        </Card>
+      </section>
+    );
+  }
 
   return (
     <section aria-labelledby="mine-title" className="grid min-w-0 grid-cols-1 content-start gap-3 lg:sticky lg:top-24">

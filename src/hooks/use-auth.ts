@@ -1,11 +1,12 @@
 "use client";
 
 import { queryOptions, useMutation, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
+import { useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import { api, postLocal, refreshSession } from "@/lib/api/client";
-import { LOGIN_ROUTE, safeNextPath } from "@/lib/auth/constants";
+import { HOME_ROUTE, LOGIN_ROUTE, loginHref, safeNextPath } from "@/lib/auth/constants";
 import { tokenStore } from "@/lib/auth/token-store";
 import type {
   LoginInput,
@@ -122,11 +123,30 @@ export function useLogout() {
   return useMutation({
     mutationFn: () => postLocal<{ ok: true }>("/api/session/logout"),
     onSettled: () => {
-      tokenStore.clear();
+      tokenStore.markSignedOut();
       queryClient.clear();
       setSessionUser(queryClient, null);
-      router.replace(LOGIN_ROUTE);
+      // Browsing is public, so signing out lands on Threads & Search rather than the login page.
+      router.replace(HOME_ROUTE);
       router.refresh();
     },
   });
+}
+
+/**
+ * Gate an action behind login on public pages: returns true when signed in; otherwise sends the
+ * visitor to /login?next=<this page> (with a short toast saying why) and returns false.
+ */
+export function useRequireLogin() {
+  const user = useCurrentUser();
+  const router = useRouter();
+  return useCallback(
+    (why = "Log in to continue") => {
+      if (user) return true;
+      toast(why);
+      router.push(loginHref(`${window.location.pathname}${window.location.search}`));
+      return false;
+    },
+    [user, router],
+  );
 }

@@ -4,15 +4,16 @@ import {
   AUTH_ROUTES,
   HOME_ROUTE,
   LOGIN_ROUTE,
-  PUBLIC_ROUTES,
   REFRESH_COOKIE,
+  isPublicPath,
   matchesRoute,
   safeNextPath,
 } from "@/lib/auth/constants";
 
 /**
  * Fast, cookie-presence route guard (no network calls):
- *  - signed-out visitors hitting a protected page → /login?next=<page>
+ *  - public pages (home, projects, Knowledge Base, blogs, consultation services) → open to all
+ *  - signed-out visitors hitting any other page → /login?next=<page>
  *  - signed-in users hitting /login, /signup, /verify-otp → home (or ?next=)
  * The real validity check happens client-side via /api/session/refresh; if the cookie
  * turns out to be stale, that route clears it, so there's no redirect loop.
@@ -29,7 +30,7 @@ export function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  if (matchesRoute(pathname, PUBLIC_ROUTES)) return NextResponse.next();
+  if (isPublicPath(pathname)) return NextResponse.next();
 
   if (!hasSession) {
     const url = new URL(LOGIN_ROUTE, req.url);

@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bookmark, Compass, House, MessageSquare, UserRound, type LucideIcon } from "lucide-react";
+import { Bookmark, Compass, House, LogIn, MessageSquare, UserRound, type LucideIcon } from "lucide-react";
 
+import { useCurrentUser } from "@/hooks/use-auth";
+import { loginHref } from "@/lib/auth/constants";
 import { cn } from "@/lib/utils";
 
 export interface NavItem {
@@ -72,10 +74,15 @@ export function DesktopNav({ className }: { className?: string }) {
  */
 export function MobileTabBar({ className }: { className?: string }) {
   const pathname = usePathname();
+  const user = useCurrentUser();
+  // Signed-out visitors get "Log in" in the Profile slot (and come back here afterwards).
+  const items = user
+    ? NAV_ITEMS
+    : NAV_ITEMS.map((i) => (i.href === "/profile" ? { ...i, label: "Log in", href: loginHref(pathname), icon: LogIn } : i));
   return (
     <nav aria-label="Main" className={cn("border-t border-border bg-white", className)}>
       <ul className="grid grid-cols-5">
-        {NAV_ITEMS.map((item) => {
+        {items.map((item) => {
           const active = isActive(pathname, item);
           const Icon = item.icon;
           return (

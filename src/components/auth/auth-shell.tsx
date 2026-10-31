@@ -1,14 +1,10 @@
-import { BadgeCheck, MapPin, MessagesSquare, Star } from "lucide-react";
+import Link from "next/link";
+import { ArrowLeft, BadgeCheck, MessagesSquare, Star } from "lucide-react";
 
+import { ProjectShowcase } from "@/components/auth/project-showcase";
 import { Logo } from "@/components/brand/logo";
 
-const RATING_PARAMS = [
-  { label: "Location & Connectivity", value: 4.8 },
-  { label: "Amenities & Facilities", value: 4.6 },
-  { label: "Surrounding & Environment", value: 4.4 },
-  { label: "Construction Quality", value: 4.5 },
-  { label: "Builder", value: 4.7 },
-];
+export const MOTTO = "Real People. Real Reviews. Trusted Decisions";
 
 const FEATURES = [
   { icon: MessagesSquare, text: "Honest discussions from buyers and residents" },
@@ -22,12 +18,23 @@ const FEATURES = [
  */
 export function AuthShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="grid min-h-dvh lg:grid-cols-2 xl:grid-cols-[1.1fr_1fr]">
+    <div className="grid min-h-dvh grid-cols-1 lg:grid-cols-2 xl:grid-cols-[1.1fr_1fr]">
       <BrandPanel />
 
-      <main className="flex flex-col">
-        <header className="flex items-center border-b border-border px-5 py-3.5 lg:hidden">
-          <Logo />
+      <main className="flex min-w-0 flex-col">
+        <header className="flex items-center justify-between gap-4 border-b border-border px-5 py-3.5 lg:justify-end lg:border-0 lg:px-8 lg:pt-6">
+          <div className="min-w-0 lg:hidden">
+            <Logo />
+            <p className="mt-0.5 pl-9 text-[11px] font-semibold text-muted-foreground">{MOTTO}</p>
+          </div>
+          {/* Browsing doesn't need an account — let people go back to it. */}
+          <Link
+            href="/"
+            className="inline-flex shrink-0 items-center gap-1.5 text-sm font-semibold text-primary outline-none hover:underline focus-visible:underline"
+          >
+            <ArrowLeft className="size-5 sm:size-4" aria-hidden />
+            <span className="max-sm:sr-only">Continue without logging in</span>
+          </Link>
         </header>
         <div className="flex flex-1 items-center justify-center px-5 py-10 sm:px-8 lg:py-12">
           <div className="w-full max-w-[420px]">{children}</div>
@@ -52,7 +59,10 @@ function BrandPanel() {
       />
 
       <div className="relative z-10 flex flex-1 flex-col px-10 py-9 xl:px-14">
-        <Logo variant="inverted" />
+        <div>
+          <Logo variant="inverted" />
+          <p className="mt-2 pl-9 text-sm font-semibold tracking-wide text-sky-100">{MOTTO}</p>
+        </div>
 
         <div className="mt-auto max-w-lg pt-12">
           <h1 className="text-[2.5rem] leading-[1.1] font-extrabold tracking-tight xl:text-5xl">
@@ -63,7 +73,7 @@ function BrandPanel() {
           </p>
         </div>
 
-        <PreviewCard />
+        <ProjectShowcase />
 
         <ul className="mt-10 grid gap-3.5">
           {FEATURES.map(({ icon: Icon, text }) => (
@@ -79,39 +89,5 @@ function BrandPanel() {
         <div className="mt-auto" />
       </div>
     </aside>
-  );
-}
-
-/** A miniature of the project card from the Figma "threads-list" screen. */
-function PreviewCard() {
-  return (
-    <div
-      aria-hidden
-      className="mt-10 w-full max-w-md rotate-[-1.5deg] rounded-[18px] border border-white/20 bg-white text-foreground shadow-2xl shadow-sky-950/30"
-    >
-      <div className="flex items-start gap-3 p-4">
-        <div className="size-12 shrink-0 rounded-[10px] bg-gradient-to-br from-sky-300 via-sky-500 to-indigo-600" />
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-base leading-tight font-bold">Prestige Lakeside Habitat</p>
-          <p className="mt-1 flex items-center gap-1 text-[13px] text-muted-foreground">
-            <MapPin className="size-3.5 text-primary" /> Whitefield, Bengaluru
-          </p>
-        </div>
-        <div className="flex items-center gap-1 text-sm font-bold">
-          <Star className="size-4 fill-star text-star" /> 4.6
-        </div>
-      </div>
-      <div className="space-y-2 rounded-b-[18px] border-t border-border bg-muted px-4 py-3.5">
-        {RATING_PARAMS.map((p) => (
-          <div key={p.label} className="flex items-center gap-3 text-xs">
-            <span className="w-40 shrink-0 text-muted-foreground">{p.label}</span>
-            <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-200">
-              <span className="block h-full rounded-full bg-primary" style={{ width: `${(p.value / 5) * 100}%` }} />
-            </span>
-            <span className="w-6 text-right font-semibold">{p.value.toFixed(1)}</span>
-          </div>
-        ))}
-      </div>
-    </div>
   );
 }

@@ -5,13 +5,16 @@ import { usePathname } from "next/navigation";
 
 import { Logo } from "@/components/brand/logo";
 import { DesktopNav, MobileTabBar } from "@/components/layout/app-nav";
+import { Button } from "@/components/ui/button";
 import { UserAvatar } from "@/components/user/user-avatar";
 import { useCurrentUser } from "@/hooks/use-auth";
+import { loginHref } from "@/lib/auth/constants";
 import { cn } from "@/lib/utils";
 
 /**
  * Web app bar: logo, the main tabs (Figma's bottom navigation, moved to the top), and the
- * user's avatar → profile. Logout lives on the profile page, as in the Figma profile screen.
+ * user's avatar → profile — or Log in / Sign up for visitors browsing without an account.
+ * Logout lives on the profile page, as in the Figma profile screen.
  */
 export function AppHeader() {
   const user = useCurrentUser();
@@ -24,6 +27,17 @@ export function AppHeader() {
         <Logo />
 
         <DesktopNav className="hidden lg:block" />
+
+        {!user && (
+          <div className="flex shrink-0 items-center gap-2">
+            <Button asChild variant="ghost" className="hidden sm:inline-flex">
+              <Link href="/signup">Sign up</Link>
+            </Button>
+            <Button asChild className="h-9 px-4 lg:h-10 lg:px-5">
+              <Link href={loginHref(pathname)}>Log in</Link>
+            </Button>
+          </div>
+        )}
 
         {user && (
           <Link

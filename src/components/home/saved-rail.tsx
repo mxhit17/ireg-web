@@ -8,7 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useSavedProjects } from "@/hooks/use-home";
 import { useInView } from "@/hooks/use-in-view";
 import { useProject } from "@/hooks/use-projects";
-import { formatProjectLocation, projectTypeLabel, timeAgo } from "@/lib/format";
+import { formatProjectLocation, timeAgo } from "@/lib/format";
 import type { SavedProject } from "@/types/project";
 
 /**
@@ -19,7 +19,8 @@ import type { SavedProject } from "@/types/project";
 export function SavedRail() {
   const saved = useSavedProjects();
 
-  if (saved.isPending) {
+  // isLoading (not isPending): the query is disabled for signed-out visitors and never "loads".
+  if (saved.isLoading) {
     return (
       <section className="grid gap-3">
         <Skeleton className="h-6 w-48" />
@@ -63,9 +64,7 @@ function SavedTile({ project }: { project: SavedProject }) {
   const { ref, inView } = useInView<HTMLDivElement>({ rootMargin: "200px" });
   const detail = useProject(project.id, inView);
   const location = detail.data ? formatProjectLocation(detail.data) : null;
-  const meta = [projectTypeLabel(project.type), project.savedAt ? `Saved ${timeAgo(project.savedAt)}` : null]
-    .filter(Boolean)
-    .join(" · ");
+  const meta = project.savedAt ? `Saved ${timeAgo(project.savedAt)}` : "";
 
   return (
     <div

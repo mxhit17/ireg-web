@@ -43,7 +43,7 @@ export function HomeView() {
             {q ? (
               <>Results for &ldquo;{q}&rdquo;</>
             ) : (
-              <>Hi{user?.name ? `, ${user.name.split(" ")[0]}` : ""}</>
+              <>{user ? `Hi${user.name ? `, ${user.name.split(" ")[0]}` : ""}` : "Welcome to IREG"}</>
             )}
           </h1>
           <p className="mt-1 text-[15px] text-muted-foreground">

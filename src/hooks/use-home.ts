@@ -3,6 +3,7 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
+import { useCurrentUser } from "@/hooks/use-auth";
 import { getHome, getSavedProjects, saveProject, unsaveProject } from "@/lib/api/home";
 import { isApiError } from "@/lib/api/errors";
 import type { ProjectSummary, SavedProject } from "@/types/project";
@@ -29,10 +30,13 @@ export function useHome() {
   });
 }
 
+/** The signed-in user's saved projects (skipped for signed-out visitors). */
 export function useSavedProjects() {
+  const user = useCurrentUser();
   return useQuery({
     queryKey: homeKeys.saved,
     queryFn: getSavedProjects,
+    enabled: !!user,
     staleTime: 60 * 1000,
   });
 }

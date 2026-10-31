@@ -7,10 +7,11 @@ import { useState } from "react";
 import { DiscussionPreview } from "@/components/projects/discussion-preview";
 import { RatingStars } from "@/components/projects/rating-stars";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useRequireLogin } from "@/hooks/use-auth";
 import { useIsSaved, useToggleSave } from "@/hooks/use-home";
 import { useInView } from "@/hooks/use-in-view";
 import { useProjectRatings, useTopDiscussions } from "@/hooks/use-projects";
-import { formatPriceRange, formatProjectLocation, projectStatusLabel, projectTypeLabel } from "@/lib/format";
+import { formatProjectLocation } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { ProjectSummary } from "@/types/project";
 
@@ -26,8 +27,6 @@ export function ProjectCard({ project }: { project: ProjectSummary }) {
 
   const href = `/projects/${project.id}`;
   const location = formatProjectLocation(project);
-  const price = formatPriceRange(project.minPrice, project.maxPrice);
-  const chips = [projectTypeLabel(project.type), projectStatusLabel(project.status)].filter(Boolean) as string[];
   const total = discussions.data?.total ?? 0;
 
   return (
@@ -80,17 +79,6 @@ export function ProjectCard({ project }: { project: ProjectSummary }) {
         </div>
       </header>
 
-      {(chips.length > 0 || price) && (
-        <div className="-mt-1 flex flex-wrap items-center gap-1.5 px-4 pb-3">
-          {chips.map((c) => (
-            <span key={c} className="rounded-md bg-secondary px-2 py-0.5 text-[11px] font-semibold text-slate-600">
-              {c}
-            </span>
-          ))}
-          {price && <span className="ml-auto text-[13px] font-bold text-foreground">{price}</span>}
-        </div>
-      )}
-
       <DiscussionPreview
         data={discussions.data}
         loading={!inView || discussions.isPending}
@@ -125,10 +113,11 @@ export function SaveButton({
 }) {
   const saved = useIsSaved(project.id);
   const toggle = useToggleSave();
+  const requireLogin = useRequireLogin();
   return (
     <button
       type="button"
-      onClick={() => toggle.mutate({ project, save: !saved })}
+      onClick={() => requireLogin("Log in to save projects") && toggle.mutate({ project, save: !saved })}
       disabled={toggle.isPending}
       aria-pressed={saved}
       aria-label={saved ? `Remove ${project.name} from saved` : `Save ${project.name}`}

@@ -12,10 +12,26 @@ export const REMEMBER_MAX_AGE_SECONDS = 60 * 60 * 24 * 30; // 30 days
 export const AUTH_ROUTES = ["/login", "/signup", "/verify-otp"];
 
 /**
- * Pages anyone can open, signed in or not. Everything else requires a session.
- * Add public pages here as they are built (e.g. "/blogs", "/knowledge-base").
+ * Pages anyone can open, signed in or not — browsing is public, acting (save, rate, comment,
+ * book, write) asks for a login. Everything not matched here requires a session.
  */
-export const PUBLIC_ROUTES: string[] = [];
+const PUBLIC_PATTERNS: RegExp[] = [
+  /^\/$/, // Threads & Search (home)
+  /^\/projects\/(?!new$|requests(?:\/|$))[^/]+$/, // a project page (not the request screens)
+  /^\/knowledge-base(?:\/(?!manage(?:\/|$))[^/]+){0,2}\/?$/, // KB home, category, topic (not the editor)
+  /^\/blogs(?:\/(?!manage(?:\/|$))[^/]+)?\/?$/, // blog list and articles (not the editor)
+  /^\/consultations\/?$/, // consultation services (booking itself needs a login)
+];
+
+export function isPublicPath(pathname: string) {
+  return PUBLIC_PATTERNS.some((re) => re.test(pathname));
+}
+
+/** `/login?next=<here>` so people come straight back after signing in. */
+export function loginHref(next?: string | null) {
+  const safe = next ? safeNextPath(next, "") : "";
+  return safe && safe !== HOME_ROUTE ? `${LOGIN_ROUTE}?next=${encodeURIComponent(safe)}` : LOGIN_ROUTE;
+}
 
 export const HOME_ROUTE = "/";
 export const LOGIN_ROUTE = "/login";
