@@ -50,7 +50,7 @@ export function HomeView() {
           <p className="mt-1 text-[15px] text-muted-foreground">
             {q
               ? "Matching project names, localities, cities and states."
-              : "Discover, discuss and rate real estate projects across India."}
+              : "Discover, discuss and rate real estate projects across Delhi NCR."}
           </p>
         </div>
         <ProjectSearchBar value={q} onSearch={setQuery} className="max-w-3xl" />

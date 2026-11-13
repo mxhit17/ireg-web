@@ -4,8 +4,6 @@ import { ArrowLeft, BadgeCheck, MessagesSquare, Star } from "lucide-react";
 import { ProjectShowcase } from "@/components/auth/project-showcase";
 import { Logo } from "@/components/brand/logo";
 
-export const MOTTO = "Real People. Real Reviews. Trusted Decisions";
-
 const FEATURES = [
   { icon: MessagesSquare, text: "Honest discussions from buyers and residents" },
   { icon: Star, text: "Projects rated on 5 parameters that matter" },
@@ -25,7 +23,6 @@ export function AuthShell({ children }: { children: React.ReactNode }) {
         <header className="flex items-center justify-between gap-4 border-b border-border px-5 py-3.5 lg:justify-end lg:border-0 lg:px-8 lg:pt-6">
           <div className="min-w-0 lg:hidden">
             <Logo />
-            <p className="mt-0.5 pl-9 text-[11px] font-semibold text-muted-foreground">{MOTTO}</p>
           </div>
           {/* Browsing doesn't need an account — let people go back to it. */}
           <Link
@@ -60,8 +57,7 @@ function BrandPanel() {
 
       <div className="relative z-10 flex flex-1 flex-col px-10 py-9 xl:px-14">
         <div>
-          <Logo variant="inverted" />
-          <p className="mt-2 pl-9 text-sm font-semibold tracking-wide text-sky-100">{MOTTO}</p>
+          <Logo variant="inverted" size="lg" />
         </div>
 
         <div className="mt-auto max-w-lg pt-12">
