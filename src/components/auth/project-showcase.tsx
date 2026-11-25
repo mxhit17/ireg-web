@@ -5,7 +5,7 @@ import { MapPin, Star } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
-const PARAMS = ["Location & Connectivity", "Amenities & Facilities", "Surrounding & Environment", "Construction Quality", "Builder"];
+const PARAMS = ["Location & Connectivity", "Amenities & Facilities", "Surrounding & Environment", "Construction Quality", "Size and Layouts"];
 
 /** Sample projects for the login/sign-up brand panel (illustrative, not live data). */
 const CARDS = [

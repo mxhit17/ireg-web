@@ -14,7 +14,7 @@ export type RatingCategoryCode =
   | "AMENITIES_FACILITIES"
   | "SURROUNDING_ENVIRONMENT"
   | "CONSTRUCTION_QUALITY"
-  | "BUILDER";
+  | "SIZE_LAYOUTS";
 
 /**
  * A project as shown in lists. Normalised from both `popularity/popular` (snake_case + builder_name +
@@ -95,7 +95,7 @@ export const RATING_CATEGORIES: { code: RatingCategoryCode; label: string }[] = 
   { code: "AMENITIES_FACILITIES", label: "Amenities & Facilities" },
   { code: "SURROUNDING_ENVIRONMENT", label: "Surrounding & Environment" },
   { code: "CONSTRUCTION_QUALITY", label: "Construction Quality" },
-  { code: "BUILDER", label: "Builder" },
+  { code: "SIZE_LAYOUTS", label: "Size and Layouts" },
 ];
 
 /** GET projects/:id/my-rating, normalised. */
