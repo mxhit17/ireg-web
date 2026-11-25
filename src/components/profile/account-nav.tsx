@@ -11,6 +11,7 @@ import {
   Loader2,
   LogOut,
   MessageSquareText,
+  MessagesSquare,
   ShieldCheck,
   UserRound,
   type LucideIcon,
@@ -35,12 +36,13 @@ const ITEMS: NavItem[] = [
   { label: "Saved", icon: Bookmark, href: "/profile/saved" },
   { label: "My project requests", icon: FileClock, href: "/projects/requests" },
   { label: "My Consultations", icon: BriefcaseBusiness, href: "/consultations" },
-  { label: "Feedback", icon: MessageSquareText, href: "/feedback", soon: true },
+  { label: "Feedback", icon: MessageSquareText, href: "/feedback" },
 ];
 
 const ADMIN_ITEMS: NavItem[] = [
   { label: "Review project requests", icon: ClipboardCheck, href: "/admin/project-requests" },
   { label: "Manage consultations", icon: ShieldCheck, href: "/admin/consultations" },
+  { label: "Feedback responses", icon: MessagesSquare, href: "/admin/feedback" },
 ];
 
 const rowClass =
